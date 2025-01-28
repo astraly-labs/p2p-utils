@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message AuthorityCertificate {
+    bytes certifier_pubkey = 1;
+    bytes certified_pubkey = 2;
+    bytes certifier_signature = 3;
+    bytes certified_signature = 4;
+    bool is_signed_by_certified = 5;
+}
