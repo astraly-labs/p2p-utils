@@ -2,13 +2,13 @@ use crate::behavior::P2pBehavior;
 use crate::types::P2pRequest;
 use libp2p::{Multiaddr, PeerId, Swarm, futures::StreamExt, identity::Keypair};
 use libp2p_gossipsub::{IdentTopic, Message};
-use types::ReceivedConnection;
 use std::collections::HashSet;
+use types::ReceivedConnection;
 
 mod behavior;
 pub mod builder;
 mod events;
-mod traits;
+pub mod traits;
 pub mod types;
 
 const DEFAULT_LISTENING_PORT: u16 = 1123;
@@ -25,7 +25,8 @@ pub struct P2pNode {
     pub bootstrap_nodes: HashSet<Multiaddr>,
     pub received_messages_tx: tokio::sync::broadcast::Sender<Message>,
     pub send_messages_rx: tokio::sync::mpsc::Receiver<P2pRequest>,
-    pub connection_authorization_tx: tokio::sync::mpsc::Sender<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>
+    pub connection_authorization_tx:
+        tokio::sync::mpsc::Sender<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
 }
 
 impl P2pNode {
@@ -39,7 +40,7 @@ impl P2pNode {
         Self,
         tokio::sync::broadcast::Receiver<Message>,
         tokio::sync::mpsc::Sender<P2pRequest>,
-        tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>
+        tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
     )> {
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(keypair.clone())
             .with_tokio()
@@ -56,7 +57,8 @@ impl P2pNode {
         let (received_messages_tx, received_messages_rx) =
             tokio::sync::broadcast::channel(CHANNEL_SIZE);
         let (send_messages_tx, send_messages_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
-        let (connection_authorization_tx, connection_authorization_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (connection_authorization_tx, connection_authorization_rx) =
+            tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
         let mut sub_topics = Vec::new();
         for topic in gossipsub_topics {
@@ -110,12 +112,7 @@ impl P2pNode {
             P2pRequest::Broadcast(topic, data) => {
                 let topic_id = IdentTopic::new(&topic);
                 //TODO: warn log if topic not in subscriber topics
-                match self
-                    .swarm
-                    .behaviour_mut()
-                    .gossipsub
-                    .publish(topic_id, data)
-                {
+                match self.swarm.behaviour_mut().gossipsub.publish(topic_id, data) {
                     Ok(_) => {}
                     Err(e) => {
                         tracing::error!("Failed to publish a message on topic {} : {}", topic, e)

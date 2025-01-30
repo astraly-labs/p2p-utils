@@ -1,4 +1,7 @@
-use crate::{types::{P2pRequest, ReceivedConnection}, P2pNode, DEFAULT_LISTENING_PORT};
+use crate::{
+    DEFAULT_LISTENING_PORT, P2pNode,
+    types::{P2pRequest, ReceivedConnection},
+};
 use libp2p::{Multiaddr, identity::Keypair, multiaddr::Protocol};
 use libp2p_gossipsub::Message;
 use std::collections::HashSet;

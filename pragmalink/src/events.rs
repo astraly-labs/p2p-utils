@@ -22,17 +22,50 @@ impl P2pNode {
                         .send(message)
                         .context("fatal error: messages rx send failed")?;
                 }
-                P2pBehaviorEvent::Identify(identify::Event::Received { peer_id, info, .. }) => {
-                    self.swarm
-                        .behaviour_mut()
-                        .gossipsub
-                        .add_explicit_peer(&peer_id);
-                    self.peers.insert(peer_id);
-                    self.swarm
-                        .behaviour_mut()
-                        .kademlia
-                        .add_address(&peer_id, info.observed_addr);
-                    tracing::info!("🤝 Peer {peer_id} accepted and added in kademlia peers");
+                P2pBehaviorEvent::Identify(identify::Event::Received {
+                    peer_id,
+                    info,
+                    connection_id,
+                }) => {
+                    let connection_request = identify::Event::Received {
+                        peer_id: peer_id.clone(),
+                        info: info.clone(),
+                        connection_id: connection_id.clone(),
+                    }
+                    .try_into();
+                    let authorization_rx = match connection_request {
+                        Ok(request) => {
+                            let (tx, rx) = tokio::sync::oneshot::channel();
+                            self.connection_authorization_tx
+                                .send((request, tx))
+                                .await
+                                .context("fatal error: connection authorization tx send failed")?;
+                            rx
+                        }
+                        Err(e) => {
+                            tracing::error!(
+                                "Failed to convert identify event to connection request: {}",
+                                e
+                            );
+                            return Ok(());
+                        }
+                    };
+
+                    if authorization_rx
+                        .await
+                        .context("fatal error: connection authorization rx receive failed")?
+                    {
+                        self.swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .add_explicit_peer(&peer_id);
+                        self.peers.insert(peer_id);
+                        self.swarm
+                            .behaviour_mut()
+                            .kademlia
+                            .add_address(&peer_id, info.observed_addr);
+                        tracing::info!("🤝 Peer {peer_id} accepted and added in kademlia peers");
+                    }
                 }
                 _ => {}
             },
