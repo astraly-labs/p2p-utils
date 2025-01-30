@@ -1,9 +1,7 @@
 use crate::{
-    DEFAULT_LISTENING_PORT, P2pNode,
-    types::{P2pRequest, ReceivedConnection},
+    types::{P2pRequest, ReceivedConnection, ReceivedMessage}, P2pNode, DEFAULT_LISTENING_PORT
 };
 use libp2p::{Multiaddr, identity::Keypair, multiaddr::Protocol};
-use libp2p_gossipsub::Message;
 use std::collections::HashSet;
 
 pub struct P2pNodeBuilder {
@@ -58,7 +56,7 @@ impl P2pNodeBuilder {
         self,
     ) -> anyhow::Result<(
         P2pNode,
-        tokio::sync::broadcast::Receiver<Message>,
+        tokio::sync::broadcast::Receiver<ReceivedMessage>,
         tokio::sync::mpsc::Sender<P2pRequest>,
         tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
     )> {

@@ -1,9 +1,9 @@
 use crate::behavior::P2pBehavior;
 use crate::types::P2pRequest;
 use libp2p::{Multiaddr, PeerId, Swarm, futures::StreamExt, identity::Keypair};
-use libp2p_gossipsub::{IdentTopic, Message};
-use std::collections::HashSet;
-use types::ReceivedConnection;
+use libp2p_gossipsub::{IdentTopic, TopicHash};
+use std::collections::{HashMap, HashSet};
+use types::{ReceivedConnection, ReceivedMessage};
 
 mod behavior;
 pub mod builder;
@@ -19,11 +19,11 @@ pub struct P2pNode {
     pub peer_id: PeerId,
     pub swarm: Swarm<P2pBehavior>,
     pub peers: HashSet<PeerId>,
-    pub gossipsub_topics: Vec<(String, IdentTopic)>,
+    pub gossipsub_topics: HashMap<TopicHash, String>,
     pub listening_address: Multiaddr,
     pub identify_certificate: Option<String>,
     pub bootstrap_nodes: HashSet<Multiaddr>,
-    pub received_messages_tx: tokio::sync::broadcast::Sender<Message>,
+    pub received_messages_tx: tokio::sync::broadcast::Sender<ReceivedMessage>,
     pub send_messages_rx: tokio::sync::mpsc::Receiver<P2pRequest>,
     pub connection_authorization_tx:
         tokio::sync::mpsc::Sender<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
@@ -38,7 +38,7 @@ impl P2pNode {
         gossipsub_topics: HashSet<String>,
     ) -> anyhow::Result<(
         Self,
-        tokio::sync::broadcast::Receiver<Message>,
+        tokio::sync::broadcast::Receiver<ReceivedMessage>,
         tokio::sync::mpsc::Sender<P2pRequest>,
         tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
     )> {
@@ -60,11 +60,11 @@ impl P2pNode {
         let (connection_authorization_tx, connection_authorization_rx) =
             tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
-        let mut sub_topics = Vec::new();
+        let mut sub_topics = HashMap::new();
         for topic in gossipsub_topics {
             let topic_id = libp2p_gossipsub::IdentTopic::new(&topic);
             swarm.behaviour_mut().gossipsub.subscribe(&topic_id)?;
-            sub_topics.push((topic, topic_id));
+            sub_topics.insert(topic_id.hash(), topic);
         }
 
         Ok((

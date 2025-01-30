@@ -44,3 +44,9 @@ impl TryFrom<identify::Event> for ReceivedConnection {
 fn extract_certificate_from_agent_version(agent_version: &str) -> Option<String> {
     agent_version.split('/').nth(3).map(|s| s.into())
 }
+ #[derive(Clone, Debug)]
+pub struct ReceivedMessage {
+    pub source: Option<String>,
+    pub data: Vec<u8>,
+    pub topic: String,
+}

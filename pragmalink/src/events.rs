@@ -1,4 +1,4 @@
-use crate::{P2pNode, behavior::P2pBehaviorEvent};
+use crate::{behavior::P2pBehaviorEvent, types::ReceivedMessage, P2pNode};
 use anyhow::Context;
 use libp2p::{identify, swarm::SwarmEvent};
 
@@ -18,8 +18,24 @@ impl P2pNode {
                 P2pBehaviorEvent::Gossipsub(libp2p_gossipsub::Event::Message {
                     message, ..
                 }) => {
+                    let topic_name = match self.gossipsub_topics.get(&message.topic) {
+                        Some(topic) => topic,
+                        None => {
+                            tracing::warn!(
+                                "Received a message on an unsubscribed topic",
+                            );
+                            return Ok(())
+                        }
+                    };
+
+                    let received_message = ReceivedMessage {
+                        source: message.source.map(|peer_id| peer_id.to_string()),
+                        data: message.data.clone(),
+                        topic: topic_name.clone(),
+                    };
+
                     self.received_messages_tx
-                        .send(message)
+                        .send(received_message)
                         .context("fatal error: messages rx send failed")?;
                 }
                 P2pBehaviorEvent::Identify(identify::Event::Received {
