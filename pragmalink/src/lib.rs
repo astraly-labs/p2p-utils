@@ -2,7 +2,7 @@ use crate::behavior::P2pBehavior;
 use crate::types::P2pRequest;
 use auth_rs::AuthorityCertificate;
 use libp2p::{Multiaddr, PeerId, Swarm, futures::StreamExt, identity::Keypair};
-use libp2p_gossipsub::Message;
+use libp2p_gossipsub::{IdentTopic, Message};
 use std::collections::HashSet;
 use traits::AsHex;
 
@@ -14,13 +14,13 @@ pub mod types;
 
 const DEFAULT_LISTENING_PORT: u16 = 1123;
 const CHANNEL_SIZE: usize = 1000;
-const ORACLE_TOPIC: &str = "/pragmalink/central";
 
 pub struct P2pNode {
     pub keypair: Keypair,
     pub peer_id: PeerId,
     pub swarm: Swarm<P2pBehavior>,
     pub peers: HashSet<PeerId>,
+    pub gossipsub_topics: Vec<(String, IdentTopic)>,
     pub listening_address: Multiaddr,
     pub identify_certificate: Option<String>,
     pub bootstrap_nodes: HashSet<Multiaddr>,
@@ -34,6 +34,7 @@ impl P2pNode {
         listening_address: Multiaddr,
         bootstrap_nodes: HashSet<Multiaddr>,
         identify_certificate: Option<AuthorityCertificate>,
+        gossipsub_topics: HashSet<String>,
     ) -> anyhow::Result<(
         Self,
         tokio::sync::broadcast::Receiver<Message>,
@@ -67,12 +68,17 @@ impl P2pNode {
             })?
             .build();
 
-        let oracle_topic = libp2p_gossipsub::IdentTopic::new(ORACLE_TOPIC);
-        swarm.behaviour_mut().gossipsub.subscribe(&oracle_topic)?;
-
         let (received_messages_tx, received_messages_rx) =
             tokio::sync::broadcast::channel(CHANNEL_SIZE);
         let (send_messages_tx, send_messages_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+
+        let mut sub_topics = Vec::new();
+        for topic in gossipsub_topics {
+            let topic_id = libp2p_gossipsub::IdentTopic::new(&topic);
+            swarm.behaviour_mut().gossipsub.subscribe(&topic_id)?;
+            sub_topics.push((topic, topic_id));
+        }
+
         Ok((
             Self {
                 send_messages_rx,
@@ -84,15 +90,21 @@ impl P2pNode {
                 bootstrap_nodes,
                 received_messages_tx,
                 peers: HashSet::new(),
-            }
-            .try_dial_bootstrap_nodes(),
+                gossipsub_topics: sub_topics,
+            },
             received_messages_rx,
             send_messages_tx,
         ))
     }
+    pub fn subscribe_topic(&mut self, topic: &str) -> anyhow::Result<IdentTopic> {
+        let topic = libp2p_gossipsub::IdentTopic::new(topic);
+        self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
+        Ok(topic)
+    }
     pub async fn run(mut self) -> anyhow::Result<()> {
         tracing::info!("Starting P2P node");
         self.swarm.listen_on(self.listening_address.clone())?;
+        self.try_dial_bootstrap_nodes();
         loop {
             tokio::select! {
                     Some(req) = self.send_messages_rx.recv() => {
@@ -123,7 +135,7 @@ impl P2pNode {
         }
         Ok(())
     }
-    fn try_dial_bootstrap_nodes(mut self) -> Self {
+    fn try_dial_bootstrap_nodes(&mut self) {
         if self.bootstrap_nodes.is_empty() {
             tracing::warn!("No bootstrap nodes provided");
         } else {
@@ -142,6 +154,5 @@ impl P2pNode {
                 }
             }
         }
-        self
     }
 }

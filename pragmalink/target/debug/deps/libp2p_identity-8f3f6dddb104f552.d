@@ -1,0 +1,11 @@
+/Users/noa/p2p-utils/pragmalink/target/debug/deps/liblibp2p_identity-8f3f6dddb104f552.rmeta: /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/lib.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/ed25519.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/error.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/keypair.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/peer_id.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/generated/mod.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/generated/keys_proto.rs
+
+/Users/noa/p2p-utils/pragmalink/target/debug/deps/libp2p_identity-8f3f6dddb104f552.d: /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/lib.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/ed25519.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/error.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/keypair.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/peer_id.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/generated/mod.rs /Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/generated/keys_proto.rs
+
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/lib.rs:
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/ed25519.rs:
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/error.rs:
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/keypair.rs:
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/peer_id.rs:
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/generated/mod.rs:
+/Users/noa/.cargo/registry/src/index.crates.io-6f17d22bba15001f/libp2p-identity-0.2.10/src/generated/keys_proto.rs:

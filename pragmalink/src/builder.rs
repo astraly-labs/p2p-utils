@@ -9,6 +9,7 @@ pub struct P2pNodeBuilder {
     listening_address: Option<Multiaddr>,
     bootstrap_nodes: Option<HashSet<Multiaddr>>,
     indentify_certificate: Option<AuthorityCertificate>,
+    gossipsub_topics: Option<HashSet<String>>,
 }
 
 impl P2pNodeBuilder {
@@ -18,6 +19,7 @@ impl P2pNodeBuilder {
             listening_address: None,
             bootstrap_nodes: None,
             indentify_certificate: None,
+            gossipsub_topics: None,
         }
     }
     pub fn with_keypair(self, keypair: Keypair) -> Self {
@@ -41,6 +43,12 @@ impl P2pNodeBuilder {
     pub fn with_indentify_certificate(self, indentify_certificate: AuthorityCertificate) -> Self {
         Self {
             indentify_certificate: Some(indentify_certificate),
+            ..self
+        }
+    }
+    pub fn with_gossipsub_topics(self, gossipsub_topics: HashSet<String>) -> Self {
+        Self {
+            gossipsub_topics: Some(gossipsub_topics),
             ..self
         }
     }
@@ -75,11 +83,19 @@ impl P2pNodeBuilder {
                 HashSet::new()
             }
         };
+        let gossipsub_topics = match self.gossipsub_topics {
+            Some(gossipsub_topics) => gossipsub_topics,
+            None => {
+                tracing::warn!("No gossipsub topics provided for node, using empty set");
+                HashSet::new()
+            }
+        };
         P2pNode::new(
             keypair,
             listening_address,
             bootstrap_nodes,
             self.indentify_certificate,
+            gossipsub_topics,
         )
     }
 }
