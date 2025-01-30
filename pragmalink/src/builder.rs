@@ -5,7 +5,7 @@ use libp2p::{Multiaddr, identity::Keypair, multiaddr::Protocol};
 use std::collections::HashSet;
 
 pub struct P2pNodeBuilder {
-    keypair: Option<Keypair>,
+    keypair: Option<String>,
     listening_address: Option<String>,
     bootstrap_nodes: Option<HashSet<String>>,
     indentify_certificate: Option<String>,
@@ -13,6 +13,7 @@ pub struct P2pNodeBuilder {
 }
 
 impl P2pNodeBuilder {
+    /// Create a new P2pNodeBuilder: all set to None
     pub fn new() -> Self {
         Self {
             keypair: None,
@@ -22,30 +23,35 @@ impl P2pNodeBuilder {
             gossipsub_topics: None,
         }
     }
-    pub fn with_keypair(self, keypair: Keypair) -> Self {
+    /// Define an ed25519 keypair, encoded in hexadecimals
+    pub fn with_keypair(self, keypair: String) -> Self {
         Self {
             keypair: Some(keypair),
             ..self
         }
     }
+    /// Define a listening address: example: "/ip4/0.0.0.0/tcp/1123"
     pub fn with_listening_address(self, listening_address: String) -> Self {
         Self {
             listening_address: Some(listening_address),
             ..self
         }
     }
+    /// Define a set of bootstrap nodes addresses
     pub fn with_bootstrap_nodes(self, bootstrap_nodes: HashSet<String>) -> Self {
         Self {
             bootstrap_nodes: Some(bootstrap_nodes),
             ..self
         }
     }
+    /// Define an identity information that will be used to identify the node to other peers
     pub fn with_indentify_certificate(self, indentify_certificate: String) -> Self {
         Self {
             indentify_certificate: Some(indentify_certificate),
             ..self
         }
     }
+    /// Define a set of gossipsub topics, with the names of the topics
     pub fn with_gossipsub_topics(self, gossipsub_topics: HashSet<String>) -> Self {
         Self {
             gossipsub_topics: Some(gossipsub_topics),
@@ -61,7 +67,8 @@ impl P2pNodeBuilder {
         tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
     )> {
         let keypair = match self.keypair {
-            Some(keypair) => keypair,
+            Some(keypair) => Keypair::ed25519_from_bytes(hex::decode(keypair)?)
+                .map_err(|e| anyhow::anyhow!("Invalid keypair provided: {}", e))?,
             None => {
                 tracing::warn!("No keypair provided for node, generatng a new keypair");
                 Keypair::generate_ed25519()

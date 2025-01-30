@@ -5,26 +5,37 @@ use libp2p_gossipsub::{IdentTopic, TopicHash};
 use std::collections::{HashMap, HashSet};
 use types::{ReceivedConnection, ReceivedMessage};
 
-mod behavior;
 pub mod builder;
-mod events;
 pub mod traits;
 pub mod types;
+mod behavior;
+mod events;
 
 const DEFAULT_LISTENING_PORT: u16 = 1123;
 const CHANNEL_SIZE: usize = 1000;
 
+/// A P2P network node, use kademlia DHT and gossipsub protocol
 pub struct P2pNode {
+    /// The node ed25519 keypair
     pub keypair: Keypair,
+    /// The node peer id
     pub peer_id: PeerId,
     pub swarm: Swarm<P2pBehavior>,
+    /// Connected peers
     pub peers: HashSet<PeerId>,
+    /// Subscribed gossipsub topics with name and hash
     pub gossipsub_topics: HashMap<TopicHash, String>,
+    /// The address the node is listening on
     pub listening_address: Multiaddr,
+    /// An optional certificate, can be used to identify the node
     pub identify_certificate: Option<String>,
+    /// The bootstrap nodes addresses, to enter the network and discover other peers
     pub bootstrap_nodes: HashSet<Multiaddr>,
+    /// The channel to send received messages, with payload, source, topic...
     pub received_messages_tx: tokio::sync::broadcast::Sender<ReceivedMessage>,
+    /// The channel to receive messages to send to other peers
     pub send_messages_rx: tokio::sync::mpsc::Receiver<P2pRequest>,
+    /// Used to send the informations about a peers that sent a connection request and a oneshot channel to wait for the authorization (true / false)
     pub connection_authorization_tx:
         tokio::sync::mpsc::Sender<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
 }
@@ -86,10 +97,11 @@ impl P2pNode {
             connection_authorization_rx,
         ))
     }
-    pub fn subscribe_topic(&mut self, topic: &str) -> anyhow::Result<IdentTopic> {
+    /// Subscribe to a gossipsub topic of a given name, returning the hash of the topic
+    pub fn subscribe_topic(&mut self, topic: &str) -> anyhow::Result<TopicHash> {
         let topic = libp2p_gossipsub::IdentTopic::new(topic);
         self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
-        Ok(topic)
+        Ok(topic.hash())
     }
     pub async fn run(mut self) -> anyhow::Result<()> {
         tracing::info!("Starting P2P node");
