@@ -1,10 +1,9 @@
 use crate::behavior::P2pBehavior;
 use crate::types::P2pRequest;
-use auth_rs::AuthorityCertificate;
 use libp2p::{Multiaddr, PeerId, Swarm, futures::StreamExt, identity::Keypair};
 use libp2p_gossipsub::{IdentTopic, Message};
+use types::ReceivedConnection;
 use std::collections::HashSet;
-use traits::AsHex;
 
 mod behavior;
 pub mod builder;
@@ -26,6 +25,7 @@ pub struct P2pNode {
     pub bootstrap_nodes: HashSet<Multiaddr>,
     pub received_messages_tx: tokio::sync::broadcast::Sender<Message>,
     pub send_messages_rx: tokio::sync::mpsc::Receiver<P2pRequest>,
+    pub connection_authorization_tx: tokio::sync::mpsc::Sender<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>
 }
 
 impl P2pNode {
@@ -33,29 +33,14 @@ impl P2pNode {
         keypair: Keypair,
         listening_address: Multiaddr,
         bootstrap_nodes: HashSet<Multiaddr>,
-        identify_certificate: Option<AuthorityCertificate>,
+        identify_certificate: Option<String>,
         gossipsub_topics: HashSet<String>,
     ) -> anyhow::Result<(
         Self,
         tokio::sync::broadcast::Receiver<Message>,
         tokio::sync::mpsc::Sender<P2pRequest>,
+        tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>
     )> {
-        let identify_certificate = match identify_certificate {
-            Some(certificate) => {
-                //TODO: find a better way to get the secret key bytes
-                let secret = &keypair.clone().try_into_ed25519()?.to_bytes()[..32];
-                tracing::info!("Authority certificate succesfully signed");
-                Some(
-                    certificate
-                        .sign_certified(secret.as_hex_string())?
-                        .serialize_protobuf()
-                        .as_slice()
-                        .as_hex_string(),
-                )
-            }
-            None => None,
-        };
-
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(keypair.clone())
             .with_tokio()
             .with_tcp(
@@ -71,6 +56,7 @@ impl P2pNode {
         let (received_messages_tx, received_messages_rx) =
             tokio::sync::broadcast::channel(CHANNEL_SIZE);
         let (send_messages_tx, send_messages_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (connection_authorization_tx, connection_authorization_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
         let mut sub_topics = Vec::new();
         for topic in gossipsub_topics {
@@ -91,9 +77,11 @@ impl P2pNode {
                 received_messages_tx,
                 peers: HashSet::new(),
                 gossipsub_topics: sub_topics,
+                connection_authorization_tx,
             },
             received_messages_rx,
             send_messages_tx,
+            connection_authorization_rx,
         ))
     }
     pub fn subscribe_topic(&mut self, topic: &str) -> anyhow::Result<IdentTopic> {
@@ -120,11 +108,13 @@ impl P2pNode {
     fn handle_p2p_request(&mut self, req: P2pRequest) -> anyhow::Result<()> {
         match req {
             P2pRequest::Broadcast(topic, data) => {
+                let topic_id = IdentTopic::new(&topic);
+                //TODO: warn log if topic not in subscriber topics
                 match self
                     .swarm
                     .behaviour_mut()
                     .gossipsub
-                    .publish(topic.clone(), data)
+                    .publish(topic_id, data)
                 {
                     Ok(_) => {}
                     Err(e) => {

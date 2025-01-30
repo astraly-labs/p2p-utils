@@ -1,5 +1,4 @@
-use crate::{DEFAULT_LISTENING_PORT, P2pNode, types::P2pRequest};
-use auth_rs::AuthorityCertificate;
+use crate::{types::{P2pRequest, ReceivedConnection}, P2pNode, DEFAULT_LISTENING_PORT};
 use libp2p::{Multiaddr, identity::Keypair, multiaddr::Protocol};
 use libp2p_gossipsub::Message;
 use std::collections::HashSet;
@@ -8,7 +7,7 @@ pub struct P2pNodeBuilder {
     keypair: Option<Keypair>,
     listening_address: Option<Multiaddr>,
     bootstrap_nodes: Option<HashSet<Multiaddr>>,
-    indentify_certificate: Option<AuthorityCertificate>,
+    indentify_certificate: Option<String>,
     gossipsub_topics: Option<HashSet<String>>,
 }
 
@@ -40,7 +39,7 @@ impl P2pNodeBuilder {
             ..self
         }
     }
-    pub fn with_indentify_certificate(self, indentify_certificate: AuthorityCertificate) -> Self {
+    pub fn with_indentify_certificate(self, indentify_certificate: String) -> Self {
         Self {
             indentify_certificate: Some(indentify_certificate),
             ..self
@@ -58,6 +57,7 @@ impl P2pNodeBuilder {
         P2pNode,
         tokio::sync::broadcast::Receiver<Message>,
         tokio::sync::mpsc::Sender<P2pRequest>,
+        tokio::sync::mpsc::Receiver<(ReceivedConnection, tokio::sync::oneshot::Sender<bool>)>,
     )> {
         let keypair = match self.keypair {
             Some(keypair) => keypair,
