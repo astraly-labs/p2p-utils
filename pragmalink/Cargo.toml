@@ -1,0 +1,25 @@
+[package]
+name = "pragmalink"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.95"
+libp2p = { version = "0.54.1", features = [
+    "tokio",
+    "tcp",
+    "mdns",
+    "yamux",
+    "identify",
+    "macros",
+    "quic",
+    "kad",
+    "noise",
+    "tls"
+]}
+libp2p-gossipsub = { version = "0.47.0" }
+tokio = { version = "1.43.0", features = ["full"] }
+tracing = "0.1.41"
+auth-rs = { git = "https://github.com/astraly-labs/p2p-utils"}
+hex = "0.4.3"
+
