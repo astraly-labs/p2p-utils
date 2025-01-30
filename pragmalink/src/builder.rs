@@ -8,8 +8,8 @@ use std::collections::HashSet;
 
 pub struct P2pNodeBuilder {
     keypair: Option<Keypair>,
-    listening_address: Option<Multiaddr>,
-    bootstrap_nodes: Option<HashSet<Multiaddr>>,
+    listening_address: Option<String>,
+    bootstrap_nodes: Option<HashSet<String>>,
     indentify_certificate: Option<String>,
     gossipsub_topics: Option<HashSet<String>>,
 }
@@ -30,13 +30,13 @@ impl P2pNodeBuilder {
             ..self
         }
     }
-    pub fn with_listening_address(self, listening_address: Multiaddr) -> Self {
+    pub fn with_listening_address(self, listening_address: String) -> Self {
         Self {
             listening_address: Some(listening_address),
             ..self
         }
     }
-    pub fn with_bootstrap_nodes(self, bootstrap_nodes: HashSet<Multiaddr>) -> Self {
+    pub fn with_bootstrap_nodes(self, bootstrap_nodes: HashSet<String>) -> Self {
         Self {
             bootstrap_nodes: Some(bootstrap_nodes),
             ..self
@@ -70,17 +70,16 @@ impl P2pNodeBuilder {
             }
         };
         let listening_address = match self.listening_address {
-            Some(listening_address) => listening_address,
+            Some(listening_address) => listening_address.parse::<Multiaddr>()?,
             None => {
                 tracing::warn!("No listening address provided for node, using default");
-                "/ip4/0.0.0.0"
-                    .parse::<Multiaddr>()
-                    .unwrap() //safe because constant
-                    .with(Protocol::Tcp(DEFAULT_LISTENING_PORT))
+                "/ip4/0.0.0.0".parse::<Multiaddr>()
+                .unwrap() //safe because constant
+                .with(Protocol::Tcp(DEFAULT_LISTENING_PORT))
             }
         };
         let bootstrap_nodes = match self.bootstrap_nodes {
-            Some(bootstrap_nodes) => bootstrap_nodes,
+            Some(bootstrap_nodes) => bootstrap_nodes.into_iter().map(|addr| addr.parse::<Multiaddr>()).collect::<Result<HashSet<Multiaddr>, _>>()?,
             None => {
                 tracing::warn!("No bootstrap nodes provided for node, using empty set");
                 HashSet::new()
